@@ -1,0 +1,44 @@
+# set this to the PROJECT_ID
+export GCP_PROJECT=advanced-cloud-bootcamp
+# set this to whatever you want the service account name to be
+export SA=crossplane-svc-acct
+# don't change this     
+export GCP_SVC_ACCT="$SA@$GCP_PROJECT.iam.gserviceaccount.com"  
+# set this to the path where you want to store Crossplane's authentication key file.
+# If you just use a filename (like here), it will be stored in your home directory
+# Otherwise, you can specify a path and filename
+export KEY_FILE="$SA-keyfile.json"         
+# set this to the namespace in your **Crossplane Kubernetes Cluster** where will store
+# the information for the Crossplane GCP provider to connect to GCP.
+# This can be the namespace Crossplane is running in (typically crossplane-system)
+# but it doesn't have to be.  For this tutorial, use it.
+export PROVIDER_SECRET_NAMESPACE=crossplane-system
+
+gcloud services enable --project $GCP_PROJECT \
+  compute.googleapis.com \
+  container.googleapis.com \
+  servicenetworking.googleapis.com
+
+gcloud iam service-accounts create --project $GCP_PROJECT $SA
+
+gcloud iam service-accounts keys create --iam-account $GCP_SVC_ACCT --project $GCP_PROJECT $KEY_FILE
+
+gcloud projects add-iam-policy-binding $GCP_PROJECT --member "serviceAccount:$GCP_SVC_ACCT" --role="roles/iam.serviceAccountUser"
+gcloud projects add-iam-policy-binding $GCP_PROJECT --member "serviceAccount:$GCP_SVC_ACCT" --role="roles/container.admin"
+gcloud projects add-iam-policy-binding $GCP_PROJECT --member "serviceAccount:$GCP_SVC_ACCT" --role="roles/compute.networkAdmin"
+
+# install kubeseal
+wget https://github.com/bitnami-labs/sealed-secrets/releases/download/v0.13.1/kubeseal-linux-amd64 -O kubeseal
+sudo install -m 755 kubeseal /usr/local/bin/kubeseal
+rm ./kubeseal
+
+kubectl --namespace crossplane-system \
+    create secret generic gcp-creds \
+    --from-file creds=./$SA-keyfile.json \
+    --output json \
+    --dry-run=client \
+    | kubeseal --format yaml \
+    | tee gcp-creds.yaml
+
+# delete json again for security reasons
+rm ./$SA-keyfile.json
