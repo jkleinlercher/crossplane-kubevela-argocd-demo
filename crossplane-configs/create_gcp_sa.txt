@@ -28,7 +28,8 @@ gcloud projects add-iam-policy-binding $GCP_PROJECT --member "serviceAccount:$GC
 gcloud projects add-iam-policy-binding $GCP_PROJECT --member "serviceAccount:$GCP_SVC_ACCT" --role="roles/compute.networkAdmin"
 
 # install kubeseal
-wget https://github.com/bitnami-labs/sealed-secrets/releases/download/v0.13.1/kubeseal-linux-amd64 -O kubeseal
+wget https://github.com/bitnami-labs/sealed-secrets/releases/download/v0.17.2/kubeseal-0.17.2-linux-amd64.tar.gz -O kubeseal.tar.gz
+tar xzvf kubeseal.tar.gz kubeseal
 sudo install -m 755 kubeseal /usr/local/bin/kubeseal
 rm ./kubeseal
 
